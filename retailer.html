@@ -47,11 +47,31 @@
                 </div>
             </div>
             <div class="col d-flex align-items-center justify-content-center">
-                <button type="button" class="btn btn-primary" onclick="addTransaction()">Submit</button>&nbsp;
+                <button type="button" class="btn btn-primary" onclick="addTransaction()">Submit</button>
+            </div>
+        </form>
+        <div class="row">
+            <div class="col">
+                <select name="" id="transactionMonths" multiple>
+                    <option value="0">Jan</option>
+                    <option value="1">Feb</option>
+                    <option value="2">March</option>
+                    <option value="3">April</option>
+                    <option value="4">May</option>
+                    <option value="5">June</option>
+                    <option value="6">July</option>
+                    <option value="7">Aug</option>
+                    <option value="8">Sep</option>
+                    <option value="9">Oct</option>
+                    <option value="10">Nov</option>
+                    <option value="11">Dec</option>
+                </select>
+            </div>
+            <div class="col" style="position: relative;right:500px;">
                 <button type="button" class="btn btn-primary" onclick="calculateThreeMonthData()">All Points Per
                     Month</button>
             </div>
-        </form>
+        </div>
         <table class="table text-center">
             <thead>
                 <tr>
@@ -68,22 +88,10 @@
             <thead>
                 <tr>
                     <th rowspan="2">Customer Name</th>
-                    <th colspan="12">Month Rewards</th>
+                    <th colspan="3">Month Rewards</th>
                     <th rowspan="2">Total Reward Points</th>
                 </tr>
-                <tr>
-                    <th>Jan</th>
-                    <th>Feb</th>
-                    <th>Mar</th>
-                    <th>Apr</th>
-                    <th>May</th>
-                    <th>June</th>
-                    <th>July</th>
-                    <th>Aug</th>
-                    <th>Sep</th>
-                    <th>Oct</th>
-                    <th>Nov</th>
-                    <th>Dec</th>
+                <tr id="monthheaders">
                 </tr>
             </thead>
             <tbody id="tbody1"></tbody>
@@ -93,7 +101,6 @@
     <script>
         let transactions = [];
         const tableKeys = ['name', 'dateStr', 'amount', 'points'];
-        const monthsIndexs = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]];
         function addTransaction() {
             const customerName = document.getElementById("name").value;
             const transactionDate = document.getElementById("date").value;
@@ -142,6 +149,19 @@
         }
 
         function calculateThreeMonthData() {
+            let result = [];
+            let options = document.getElementById('transactionMonths');
+            let opt;
+            for (let i = 0, iLen = options.length; i < iLen; i++) {
+                opt = options[i];
+                if (opt.selected) {
+                    result.push(opt.value || opt.text);
+                }
+            }
+            if (result.length !== 3) {
+                alert('Please select only 3 months');
+                return;
+            }
             let transactionData = {};
             for (const data of transactions) {
                 const month = new Date(data.date).getMonth();
@@ -152,33 +172,64 @@
                 } catch (e) {
                     console.log(e);
                 }
-                let monthRewardsOld = 0;
+                let thisMonthPoints = 0;
+                try {
+                    thisMonthPoints = (points + (transactionData[name][month])) || points;
+                } catch (e) {
+                    thisMonthPoints = points;
+                }
+                let totalValue = 0;
+                try {
+                    totalValue = points + transactionData[name]['total'];
+                } catch (e) {
+                    totalValue = points;
+                }
                 transactionData[name] = {
                     name: name,
                     ...allData,
-                    [month]: (() => {
-                        try {
-                            return points + (transactionData[name][month])
-                        } catch (e) {
-                            console.log('e', e);
-                            return points
-                        }
-                    })(),
-                    total: (() => {
-                        try {
-                            return points + transactionData[name]['total']
-                        } catch (e) {
-                            return points
-                        }
-                    })()
+                    [month]: thisMonthPoints,
+                    total: totalValue
                 }
             }
-            const dataRecordsPoints = [];
+            let dataRecordsPoints = [];
             for (const name in transactionData) {
                 dataRecordsPoints.push(transactionData[name]);
             }
-            const monthsSequence = ['name', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 'total'];
-            createTable(dataRecordsPoints, 'tbody1', monthsSequence);
+            const finalResult = dataRecordsPoints.map(item => {
+                if (item) {
+                    let data = item;
+                    let totalPoints = 0;
+                    for (const x of result) {
+                        totalPoints += item[parseInt(x)] || 0;
+                    }
+                    data.total = totalPoints;
+                    return data
+                } else {
+                    return [];
+                }
+            });
+            const monthsData = {
+                0: 'Jan',
+                1: 'Feb',
+                2: 'March',
+                3: 'April',
+                4: 'May',
+                5: 'June',
+                6: 'July',
+                7: 'Aug',
+                8: 'Sep',
+                9: 'Oct',
+                10: 'Nov',
+                11: 'Dec'
+            }
+            const tr = document.getElementById('monthheaders');
+            let th = '';
+            for (const x of result) {
+                th += `<th>${monthsData[x]}</th>`;
+            }
+            tr.innerHTML = th;
+            const monthsSequence = ['name', ...result, 'total'];
+            createTable(finalResult, 'tbody1', monthsSequence);
         }
 
     </script>
